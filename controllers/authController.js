@@ -30,13 +30,14 @@ exports.register = async (req, res) => {
 
     // 👤 Patient
     else {
-      let doctor = null;
+      // Doctor code is required for patient registration
+      if (!doctorCode) {
+        return res.status(400).json({ message: "Doctor code is required to register as a patient" });
+      }
 
-      if (doctorCode) {
-        doctor = await User.findOne({ doctorCode });
-        if (!doctor) {
-          return res.status(400).json({ message: "Invalid doctor code" });
-        }
+      const doctor = await User.findOne({ doctorCode, role: "doctor" });
+      if (!doctor) {
+        return res.status(400).json({ message: "Invalid doctor code. Please ask your doctor for the correct code." });
       }
 
       user = await User.create({
@@ -44,7 +45,7 @@ exports.register = async (req, res) => {
         email,
         password: hashedPassword,
         role: "patient",
-        doctor: doctor ? doctor._id : null
+        doctor: doctor._id
       });
     }
 

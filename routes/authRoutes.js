@@ -33,12 +33,13 @@ const { registerRules, loginRules, validate } = require("../middlewares/validati
  *                 example: doctor
  *               doctorCode:
  *                 type: string
+ *                 description: "Required if role is patient. Get this code from your doctor."
  *                 example: DOC-ABC123
  *     responses:
  *       201:
  *         description: Registered successfully
  *       400:
- *         description: Invalid data
+ *         description: Invalid data or missing/wrong doctor code
  */
 router.post("/register", registerRules, validate, register);
 
