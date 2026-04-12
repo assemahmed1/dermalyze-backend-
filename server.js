@@ -49,8 +49,6 @@ app.use(hpp());
 // 7) Apply global rate limiter to all /api routes
 app.use("/api", apiLimiter);
 
-app.use("/uploads", express.static("uploads"));
-
 connectDB();
 
 // Swagger UI
