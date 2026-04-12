@@ -1,60 +1,92 @@
 const Patient = require("../models/Patient");
 
-const createPatient = async (req, res) => {
+// ================= CREATE PATIENT =================
+const createPatient = async (req, res, next) => {
   try {
     const { name, age, gender, diagnosis, nationalId, phone, address, medicalHistory } = req.body;
 
-    if (!name || !age || !gender) {
-      return res.status(400).json({ message: "Missing fields" });
-    }
-
     const patient = await Patient.create({
-      name, age, gender, diagnosis,
-      nationalId, phone, address, medicalHistory,
+      name,
+      age,
+      gender,
+      diagnosis,
+      nationalId,
+      phone,
+      address,
+      medicalHistory,
       doctor: req.user._id,
     });
 
     res.status(201).json(patient);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 
-const getPatients = async (req, res) => {
+// ================= GET ALL PATIENTS (doctor-scoped) =================
+const getPatients = async (req, res, next) => {
   try {
-    const patients = await Patient.find({ doctor: req.user._id }).sort({ createdAt: -1 });
+    const patients = await Patient.find({ doctor: req.user._id })
+      .sort({ createdAt: -1 })
+      .maxTimeMS(5000);
     res.json(patients);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 
-const getPatientById = async (req, res) => {
+// ================= GET PATIENT BY ID (ownership check) =================
+const getPatientById = async (req, res, next) => {
   try {
-    const patient = await Patient.findById(req.params.id);
-    if (!patient) return res.status(404).json({ message: "Not found" });
+    // IDOR Fix: scope lookup to both ID and doctor
+    const patient = await Patient.findOne({
+      _id: req.params.id,
+      doctor: req.user._id,
+    });
+
+    if (!patient) {
+      return res.status(404).json({ message: "Patient not found" });
+    }
+
     res.json(patient);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 
-const updatePatientStatus = async (req, res) => {
+// ================= UPDATE PATIENT STATUS (ownership check) =================
+const updatePatientStatus = async (req, res, next) => {
   try {
-    const patient = await Patient.findById(req.params.id);
-    if (!patient) return res.status(404).json({ message: "Not found" });
+    const allowedStatuses = ["Improving", "Stable", "Critical"];
+    const { status } = req.body;
 
-    patient.status = req.body.status || patient.status;
+    if (!status || !allowedStatuses.includes(status)) {
+      return res.status(400).json({
+        message: `Status must be one of: ${allowedStatuses.join(", ")}`,
+      });
+    }
+
+    // IDOR Fix: ensure patient belongs to this doctor
+    const patient = await Patient.findOne({
+      _id: req.params.id,
+      doctor: req.user._id,
+    });
+
+    if (!patient) {
+      return res.status(404).json({ message: "Patient not found" });
+    }
+
+    patient.status = status;
     await patient.save();
 
     res.json(patient);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 
-// ✅ Update Recovery Progress
-const updateRecoveryProgress = async (req, res) => {
+// ================= UPDATE RECOVERY PROGRESS (ownership check) =================
+const updateRecoveryProgress = async (req, res, next) => {
   try {
     const { progress } = req.body;
 
@@ -62,17 +94,20 @@ const updateRecoveryProgress = async (req, res) => {
       return res.status(400).json({ message: "Progress must be between 0 and 100" });
     }
 
-    const patient = await Patient.findByIdAndUpdate(
-      req.params.id,
+    // IDOR Fix: ensure patient belongs to this doctor
+    const patient = await Patient.findOneAndUpdate(
+      { _id: req.params.id, doctor: req.user._id },
       { recoveryProgress: progress },
       { new: true }
     );
 
-    if (!patient) return res.status(404).json({ message: "Not found" });
+    if (!patient) {
+      return res.status(404).json({ message: "Patient not found" });
+    }
 
     res.json({ message: "Recovery progress updated", patient });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 

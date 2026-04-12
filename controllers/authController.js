@@ -3,7 +3,7 @@ const bcrypt = require("bcryptjs");
 const generateToken = require("../utils/generateToken");
 
 // ================= REGISTER =================
-exports.register = async (req, res) => {
+exports.register = async (req, res, next) => {
   try {
     const { name, email, password, role, doctorCode } = req.body;
 
@@ -64,12 +64,12 @@ exports.register = async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 
 // ================= LOGIN =================
-exports.login = async (req, res) => {
+exports.login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
@@ -100,6 +100,6 @@ exports.login = async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };

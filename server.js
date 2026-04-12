@@ -17,10 +17,36 @@ const verifyRoutes = require("./routes/verifyRoutes");
 const errorHandler = require("./middlewares/errorHandler");
 const { loadModels } = require("./services/faceService");
 
+// Security related dependencies
+const helmet = require("helmet");
+const mongoSanitize = require("express-mongo-sanitize");
+const xss = require("xss-clean");
+const hpp = require("hpp");
+const { apiLimiter } = require("./middlewares/rateLimiters");
+
 const app = express();
 
+// 1) Set security HTTP headers
+app.use(helmet());
+
+// 2) Enable CORS (can be restricted in the future)
 app.use(cors());
-app.use(express.json());
+
+// 3) Body parser, reading data into req.body with size limit (e.g., 10kb)
+app.use(express.json({ limit: "10kb" })); // Prevents large payloads
+
+// 4) Data sanitization against NoSQL query injection
+app.use(mongoSanitize());
+
+// 5) Data sanitization against XSS
+app.use(xss());
+
+// 6) Prevent parameter pollution
+app.use(hpp());
+
+// 7) Apply global rate limiter to all /api routes
+app.use("/api", apiLimiter);
+
 app.use("/uploads", express.static("uploads"));
 
 connectDB();

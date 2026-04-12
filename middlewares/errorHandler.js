@@ -38,9 +38,15 @@ const errorHandler = (err, req, res, next) => {
   }
 
   // Default
-  res.status(err.status || 500).json({
-    message: err.message || "Internal server error"
-  });
+  const statusCode = err.status || err.statusCode || 500;
+  
+  // Do not leak error details in production for 500 errors
+  let message = err.message || "Internal server error";
+  if (process.env.NODE_ENV === "production" && statusCode === 500) {
+    message = "Internal Server Error";
+  }
+
+  res.status(statusCode).json({ message });
 };
 
 module.exports = errorHandler;

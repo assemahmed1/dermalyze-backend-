@@ -1,13 +1,18 @@
 const Medication = require("../models/Medication");
 const Patient = require("../models/Patient");
 
-// ✅ Doctor adds medication to patient
-exports.addMedication = async (req, res) => {
+// ================= ADD MEDICATION =================
+exports.addMedication = async (req, res, next) => {
   try {
     const { patientId } = req.params;
     const { name, dosage, frequency, notes } = req.body;
 
-    const patient = await Patient.findById(patientId);
+    // IDOR Fix: ensure patient belongs to this doctor
+    const patient = await Patient.findOne({
+      _id: patientId,
+      doctor: req.user.id,
+    });
+
     if (!patient) {
       return res.status(404).json({ message: "Patient not found" });
     }
@@ -23,29 +28,46 @@ exports.addMedication = async (req, res) => {
 
     res.status(201).json({ message: "Medication added", medication });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 
-// ✅ Get patient medications
-exports.getPatientMedications = async (req, res) => {
+// ================= GET PATIENT MEDICATIONS =================
+exports.getPatientMedications = async (req, res, next) => {
   try {
     const { patientId } = req.params;
 
-    const medications = await Medication.find({ patient: patientId }).sort({ createdAt: -1 });
+    const medications = await Medication.find({ patient: patientId })
+      .sort({ createdAt: -1 })
+      .maxTimeMS(5000);
 
     res.json(medications);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 
-// ✅ Update medication (activate/deactivate or edit)
-exports.updateMedication = async (req, res) => {
+// ================= UPDATE MEDICATION (whitelist + ownership check) =================
+exports.updateMedication = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const medication = await Medication.findByIdAndUpdate(id, req.body, { new: true });
+    // Mass Assignment Fix: only allow specific fields to be updated
+    const { name, dosage, frequency, notes, isActive } = req.body;
+
+    const allowedUpdate = {};
+    if (name !== undefined) allowedUpdate.name = name;
+    if (dosage !== undefined) allowedUpdate.dosage = dosage;
+    if (frequency !== undefined) allowedUpdate.frequency = frequency;
+    if (notes !== undefined) allowedUpdate.notes = notes;
+    if (isActive !== undefined) allowedUpdate.isActive = isActive;
+
+    // IDOR Fix: ensure medication was created by this doctor
+    const medication = await Medication.findOneAndUpdate(
+      { _id: id, doctor: req.user.id },
+      allowedUpdate,
+      { new: true, runValidators: true }
+    );
 
     if (!medication) {
       return res.status(404).json({ message: "Medication not found" });
@@ -53,19 +75,27 @@ exports.updateMedication = async (req, res) => {
 
     res.json({ message: "Medication updated", medication });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 
-// ✅ Delete medication
-exports.deleteMedication = async (req, res) => {
+// ================= DELETE MEDICATION (ownership check) =================
+exports.deleteMedication = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    await Medication.findByIdAndDelete(id);
+    // IDOR Fix: ensure medication was created by this doctor
+    const medication = await Medication.findOneAndDelete({
+      _id: id,
+      doctor: req.user.id,
+    });
+
+    if (!medication) {
+      return res.status(404).json({ message: "Medication not found" });
+    }
 
     res.json({ message: "Medication deleted" });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };

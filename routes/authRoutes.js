@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { register, login } = require("../controllers/authController");
 const { registerRules, loginRules, validate } = require("../middlewares/validationMiddleware");
+const { authLimiter } = require("../middlewares/rateLimiters");
 
 /**
  * @swagger
@@ -41,7 +42,7 @@ const { registerRules, loginRules, validate } = require("../middlewares/validati
  *       400:
  *         description: Invalid data or missing/wrong doctor code
  */
-router.post("/register", registerRules, validate, register);
+router.post("/register", authLimiter, registerRules, validate, register);
 
 /**
  * @swagger
@@ -70,6 +71,6 @@ router.post("/register", registerRules, validate, register);
  *       400:
  *         description: Invalid data
  */
-router.post("/login", loginRules, validate, login);
+router.post("/login", authLimiter, loginRules, validate, login);
 
 module.exports = router;
