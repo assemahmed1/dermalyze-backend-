@@ -3,7 +3,7 @@ const Medication = require("../models/Medication");
 
 // 🧠 My Smart History
 // Doctor searches by disease → finds best performing medication
-exports.getSmartHistory = async (req, res) => {
+exports.getSmartHistory = async (req, res, next) => {
   try {
     const doctorId = req.user.id;
     const { disease } = req.query;
@@ -86,6 +86,6 @@ exports.getSmartHistory = async (req, res) => {
       insights,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };

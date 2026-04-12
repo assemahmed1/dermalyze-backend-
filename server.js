@@ -29,8 +29,10 @@ const app = express();
 // 1) Set security HTTP headers
 app.use(helmet());
 
-// 2) Enable CORS (can be restricted in the future)
-app.use(cors());
+// 2) Enable CORS (restricted in production)
+app.use(cors({
+  origin: process.env.NODE_ENV === "production" ? process.env.FRONTEND_URL : "*"
+}));
 
 // 3) Body parser, reading data into req.body with size limit (e.g., 10kb)
 app.use(express.json({ limit: "10kb" })); // Prevents large payloads

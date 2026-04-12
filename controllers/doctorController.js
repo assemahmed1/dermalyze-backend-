@@ -3,7 +3,7 @@ const Patient = require("../models/Patient");
 const Analysis = require("../models/Analysis");
 
 // Link patient to doctor
-exports.linkDoctor = async (req, res) => {
+exports.linkDoctor = async (req, res, next) => {
   try {
     const { doctorCode } = req.body;
 
@@ -17,33 +17,36 @@ exports.linkDoctor = async (req, res) => {
 
     res.json({ message: "Doctor linked successfully", doctor: doctor.name });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 
 // Get doctor's patients
-exports.getPatients = async (req, res) => {
+exports.getPatients = async (req, res, next) => {
   try {
     const patients = await Patient.find({ doctor: req.user.id }).sort({ createdAt: -1 });
     res.json(patients);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 
 // Get patient analyses
-exports.getPatientAnalyses = async (req, res) => {
+exports.getPatientAnalyses = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const analyses = await Analysis.find({ patient: id }).sort({ createdAt: -1 });
+
+    // IDOR Fix: Ensure analysis requested belongs to the doctor asking for it
+    const analyses = await Analysis.find({ patient: id, doctor: req.user.id }).sort({ createdAt: -1 });
+
     res.json(analyses);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 
 // ✅ Doctor Stats — Total / Critical / Active
-exports.getDoctorStats = async (req, res) => {
+exports.getDoctorStats = async (req, res, next) => {
   try {
     const doctorId = req.user.id;
 
@@ -60,6 +63,6 @@ exports.getDoctorStats = async (req, res) => {
       infectedPeople: total, // All patients have a skin condition
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };

@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const multer = require("multer");
 const { verifyIdentity } = require("../controllers/verifyController");
+const protect = require("../middlewares/authMiddleware");
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -35,6 +36,7 @@ const upload = multer({ storage: multer.memoryStorage() });
  */
 router.post(
   "/verify-identity",
+  protect,
   upload.fields([
     { name: "idFront", maxCount: 1 },
     { name: "idBack", maxCount: 1 },
