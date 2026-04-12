@@ -36,8 +36,13 @@ exports.getPatientAnalyses = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    // IDOR Fix: Ensure analysis requested belongs to the doctor asking for it
-    const analyses = await Analysis.find({ patient: id, doctor: req.user.id }).sort({ createdAt: -1 });
+    // IDOR Fix: Explicitly check if the patient exists and belongs to this doctor
+    const patient = await Patient.findOne({ _id: id, doctor: req.user.id });
+    if (!patient) {
+      return res.status(404).json({ message: "Patient not found or unauthorized access" });
+    }
+
+    const analyses = await Analysis.find({ patient: id }).sort({ createdAt: -1 });
 
     res.json(analyses);
   } catch (error) {
