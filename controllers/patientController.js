@@ -14,7 +14,7 @@ const createPatient = async (req, res, next) => {
       phone,
       address,
       medicalHistory,
-      doctor: req.user._id,
+      doctor: req.user.id,
     });
 
     res.status(201).json(patient);
@@ -26,7 +26,7 @@ const createPatient = async (req, res, next) => {
 // ================= GET ALL PATIENTS (doctor-scoped) =================
 const getPatients = async (req, res, next) => {
   try {
-    const patients = await Patient.find({ doctor: req.user._id })
+    const patients = await Patient.find({ doctor: req.user.id })
       .sort({ createdAt: -1 })
       .maxTimeMS(5000);
     res.json(patients);
@@ -41,7 +41,7 @@ const getPatientById = async (req, res, next) => {
     // IDOR Fix: scope lookup to both ID and doctor
     const patient = await Patient.findOne({
       _id: req.params.id,
-      doctor: req.user._id,
+      doctor: req.user.id,
     });
 
     if (!patient) {
@@ -69,7 +69,7 @@ const updatePatientStatus = async (req, res, next) => {
     // IDOR Fix: ensure patient belongs to this doctor
     const patient = await Patient.findOne({
       _id: req.params.id,
-      doctor: req.user._id,
+      doctor: req.user.id,
     });
 
     if (!patient) {
@@ -96,7 +96,7 @@ const updateRecoveryProgress = async (req, res, next) => {
 
     // IDOR Fix: ensure patient belongs to this doctor
     const patient = await Patient.findOneAndUpdate(
-      { _id: req.params.id, doctor: req.user._id },
+      { _id: req.params.id, doctor: req.user.id },
       { recoveryProgress: progress },
       { new: true }
     );

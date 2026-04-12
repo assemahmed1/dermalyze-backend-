@@ -37,6 +37,16 @@ exports.getPatientMedications = async (req, res, next) => {
   try {
     const { patientId } = req.params;
 
+    // IDOR Fix: verify patient belongs to this doctor before returning medications
+    const patient = await Patient.findOne({
+      _id: patientId,
+      doctor: req.user.id,
+    });
+
+    if (!patient) {
+      return res.status(404).json({ message: "Patient not found" });
+    }
+
     const medications = await Medication.find({ patient: patientId })
       .sort({ createdAt: -1 })
       .maxTimeMS(5000);
